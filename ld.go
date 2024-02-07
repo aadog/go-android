@@ -1,4 +1,4 @@
-package android
+package ndk
 
 /*
 #cgo LDFLAGS: -llog

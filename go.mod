@@ -1,1 +1,1 @@
-module github.com/aadog/go-android
+module github.com/aadog/go-ndk

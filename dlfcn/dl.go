@@ -5,7 +5,7 @@ package dlfcn
 */
 import "C"
 import (
-	"github.com/aadog/go-android/utils"
+	"github.com/aadog/go-ndk/utils"
 	"unsafe"
 )
 
