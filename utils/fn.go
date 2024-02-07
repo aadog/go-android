@@ -1,4 +1,4 @@
-package go_java
+package utils
 
 import "C"
 import "unsafe"

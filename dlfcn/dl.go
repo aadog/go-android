@@ -1,10 +1,15 @@
-package go_java
+package dlfcn
 
+/*
+#include <dlfcn.h>
+*/
 import "C"
-import "unsafe"
+import (
+	"github.com/aadog/go-android/utils"
+	"unsafe"
+)
 
 const (
-	// dlopen() flags. See man dlopen.
 	RTLD_LAZY     = int(C.RTLD_LAZY)
 	RTLD_NOW      = int(C.RTLD_NOW)
 	RTLD_GLOBAL   = int(C.RTLD_GLOBAL)
@@ -13,11 +18,11 @@ const (
 	RTLD_NOLOAD   = int(C.RTLD_NOLOAD)
 )
 
-func DlOpen(name string, flag float32) unsafe.Pointer {
-	return unsafe.Pointer(C.DlOpen(C.CString(name), C.int(flag)))
+func DlOpen(name string, flag int) unsafe.Pointer {
+	return unsafe.Pointer(C.dlopen(utils.CString(name), C.int(flag)))
 }
 func DlSym(handle unsafe.Pointer, symbol string) unsafe.Pointer {
-	sym := CString(symbol)
+	sym := utils.CString(symbol)
 	return unsafe.Pointer(C.dlsym(handle, sym))
 }
 func DlClose(dl unsafe.Pointer) {
@@ -28,5 +33,6 @@ func DlError() *string {
 	if ptr == nil {
 		return nil
 	}
-	return C.GoString(ptr)
+	s := C.GoString(ptr)
+	return &s
 }

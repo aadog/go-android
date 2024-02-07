@@ -1,1 +1,1 @@
-module github.com/aadog/go-java
+module github.com/aadog/go-android
