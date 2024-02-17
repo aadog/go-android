@@ -5,8 +5,8 @@ package dlfcn
 */
 import "C"
 import (
-	"github.com/aadog/go-ndk/utils"
 	"unsafe"
+	"github.com/aadog/go-ndk/utils"
 )
 
 const (
@@ -19,10 +19,10 @@ const (
 )
 
 func DlOpen(name string, flag int) unsafe.Pointer {
-	return unsafe.Pointer(C.dlopen(utils.CString(name), C.int(flag)))
+	return unsafe.Pointer(C.dlopen((*C.char)(utils.CString(name)), C.int(flag)))
 }
 func DlSym(handle unsafe.Pointer, symbol string) unsafe.Pointer {
-	sym := utils.CString(symbol)
+	sym := (*C.char)(utils.CString(symbol))
 	return unsafe.Pointer(C.dlsym(handle, sym))
 }
 func DlClose(dl unsafe.Pointer) {

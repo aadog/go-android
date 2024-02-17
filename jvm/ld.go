@@ -1,4 +1,4 @@
-package ndk
+package jvm
 
 /*
 #cgo LDFLAGS: -llog

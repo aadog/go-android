@@ -9,3 +9,10 @@ func CString(b string) *C.char {
 	copy(utf8StrArr, temp)
 	return (*C.char)(unsafe.Pointer(&utf8StrArr[0]))
 }
+
+func CopyCStringToGo(p unsafe.Pointer) string {
+	goStr := C.GoString((*C.char)(p))
+	b := make([]byte, len(goStr))
+	copy(b, goStr)
+	return string(b)
+}
