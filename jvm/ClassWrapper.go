@@ -41,6 +41,73 @@ func (c *ClassWrapper) GetMethodID(name string, sig string) mo.Result[jni.Jmetho
 //		return mo.Ok(true)
 //	}
 
+func (c *ClassWrapper) EnumMatchStaticMethod(funcName string, classTypeName ...string) mo.Result[*JavaLangReflectMethodObjectWrapper] {
+	allMethods, err := c.GetMethods().Get()
+	if err != nil {
+		return mo.Err[*JavaLangReflectMethodObjectWrapper](err)
+	}
+	var matchPtr uintptr
+	defer func() {
+		for _, method := range allMethods {
+			if method.ptr != matchPtr {
+				//LogError("Go", "free:%v", funcName, method.ptr)
+				method.Free()
+			}
+		}
+	}()
+
+	match, finded := lo.Find(allMethods, func(item *JavaLangReflectMethodObjectWrapper) bool {
+		modifiers := item.GetModifiers().MustGet()
+		if !Modifier.IsPublic(modifiers).MustGet() {
+			return false
+		}
+		if !Modifier.IsStatic(modifiers).MustGet() {
+			return false
+		}
+		itemName := item.GetName().MustGet()
+		if itemName != funcName {
+			return false
+		}
+
+		paramCount := item.GetParameterCount().MustGet()
+		if paramCount != len(classTypeName) {
+			return false
+		}
+		itemTypes, err := item.GetParameterTypes().Get()
+		if err != nil {
+			panic(err)
+		}
+		for idx, itemType := range itemTypes {
+			cls := Use(classTypeName[idx]).MustGet()
+			if !cls.IsAssignableFrom(itemType) {
+				return false
+			}
+		}
+		return true
+	})
+	if finded == false {
+		sErrBuilder := strings.Builder{}
+		sErrBuilder.WriteString(fmt.Sprintf("not match static %s methods, look method list\n", funcName))
+		sErrBuilder.WriteString(DeclaredMethodsToString(lo.Filter(allMethods, func(item *JavaLangReflectMethodObjectWrapper, index int) bool {
+			modifiers := item.GetModifiers().MustGet()
+			if !Modifier.IsPublic(modifiers).MustGet() {
+				return false
+			}
+			if !Modifier.IsStatic(modifiers).MustGet() {
+				return false
+			}
+			itemName := item.GetName().MustGet()
+			if itemName != funcName {
+				return false
+			}
+			return true
+		})))
+
+		return mo.Err[*JavaLangReflectMethodObjectWrapper](errors.New(sErrBuilder.String()))
+	}
+	matchPtr = match.ptr
+	return mo.Ok(match)
+}
 func (c *ClassWrapper) EnumMatchMethod(funcName string, classTypeName ...string) mo.Result[*JavaLangReflectMethodObjectWrapper] {
 	allMethods, err := c.GetMethods().Get()
 	if err != nil {
@@ -61,7 +128,9 @@ func (c *ClassWrapper) EnumMatchMethod(funcName string, classTypeName ...string)
 		if !Modifier.IsPublic(modifiers).MustGet() {
 			return false
 		}
-
+		if Modifier.IsStatic(modifiers).MustGet() {
+			return false
+		}
 		itemName := item.GetName().MustGet()
 		if itemName != funcName {
 			return false
@@ -89,7 +158,20 @@ func (c *ClassWrapper) EnumMatchMethod(funcName string, classTypeName ...string)
 	if finded == false {
 		sErrBuilder := strings.Builder{}
 		sErrBuilder.WriteString(fmt.Sprintf("not match %s methods, look method list\n", funcName))
-		sErrBuilder.WriteString(DeclaredMethodsToString(allMethods))
+		sErrBuilder.WriteString(DeclaredMethodsToString(lo.Filter(allMethods, func(item *JavaLangReflectMethodObjectWrapper, index int) bool {
+			modifiers := item.GetModifiers().MustGet()
+			if !Modifier.IsPublic(modifiers).MustGet() {
+				return false
+			}
+			if Modifier.IsStatic(modifiers).MustGet() {
+				return false
+			}
+			itemName := item.GetName().MustGet()
+			if itemName != funcName {
+				return false
+			}
+			return true
+		})))
 
 		return mo.Err[*JavaLangReflectMethodObjectWrapper](errors.New(sErrBuilder.String()))
 	}
@@ -315,7 +397,7 @@ func (c *ClassWrapper) IsArray() mo.Result[bool] {
 	if err != nil {
 		return mo.Err[bool](err)
 	}
-	isArray, err := c.CallBooleanMethodA(isArrayMethodId).Get()
+	isArray, err := env.CallBooleanMethodA(c.JniPtr(), isArrayMethodId).Get()
 	if err != nil {
 		return mo.Err[bool](err)
 	}
@@ -337,13 +419,19 @@ func (c *ClassWrapper) String() string {
 	}
 	return s
 }
-func (c *ClassWrapper) CallBooleanMethodA(methodId jni.JmethodID, args ...jni.Jvalue) mo.Result[bool] {
-	env := LocalThreadJavaEnv()
-	result, err := env.CallBooleanMethodA(c.ptr, methodId, args...).Get()
+func (o *ClassWrapper) CallStaticObjectA(funcName string, args ...any) mo.Result[*ObjectWrapper] {
+	ret, err := ClassWrapperStaticCall[*ObjectWrapper](o, funcName, args...).Get()
 	if err != nil {
-		return mo.Err[bool](err)
+		return mo.Err[*ObjectWrapper](err)
 	}
-	return mo.Ok(result)
+	return mo.Ok(ret.(*ObjectWrapper))
+}
+func (o *ClassWrapper) CallStaticStringA(funcName string, args ...any) mo.Result[string] {
+	ret, err := ClassWrapperStaticCall[string](o, funcName, args...).Get()
+	if err != nil {
+		return mo.Err[string](err)
+	}
+	return mo.Ok(ret.(string))
 }
 
 //	func (c *ClassWrapper) ToString() mo.Result[string] {

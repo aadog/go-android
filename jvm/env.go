@@ -100,3 +100,18 @@ func Use(className string) mo.Result[*ClassWrapper] {
 	ClassWrapperCacheMap.Store(className, clsWrapper)
 	return mo.Ok(clsWrapper)
 }
+func ForeUse(className string, cls jni.Jclass) mo.Result[*ClassWrapper] {
+	className = strings.ReplaceAll(className, ".", "/")
+	lkClassWrapperMap.Lock()
+	defer lkClassWrapperMap.Unlock()
+	loadClass, ok := ClassWrapperCacheMap.Load(className)
+	if ok {
+		return mo.Ok(loadClass.(*ClassWrapper))
+	}
+	env := LocalThreadJavaEnv()
+
+	//所有class都使用GlobalRef,
+	clsWrapper := ClassWrapperWithJniPtr(env.NewGlobalRef(cls))
+	ClassWrapperCacheMap.Store(className, clsWrapper)
+	return mo.Ok(clsWrapper)
+}

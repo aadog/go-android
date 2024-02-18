@@ -1186,20 +1186,23 @@ func (env Env) CallNonvirtualVoidMethodA(obj Jobject, clazz Jclass, methodID Jme
 	C.CallNonvirtualVoidMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args))
 }
 
-func (env Env) GetFieldID(clazz Jclass, name string, sig string) JfieldID {
+func (env Env) GetFieldID(clazz Jclass, name string, sig string) mo.Result[JfieldID] {
 	cstr_name := C.CString(name)
 	defer C.free(unsafe.Pointer(cstr_name))
 	cstr_sig := C.CString(sig)
 	defer C.free(unsafe.Pointer(cstr_sig))
-	return JfieldID(unsafe.Pointer(C.GetFieldID((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), cstr_name, cstr_sig)))
+	fieldId := JfieldID(unsafe.Pointer(C.GetFieldID((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), cstr_name, cstr_sig)))
+	return mo.Ok(fieldId)
 }
 
-func (env Env) GetObjectField(obj Jobject, fieldID JfieldID) Jobject {
-	return Jobject(C.GetObjectField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
+func (env Env) GetObjectField(obj Jobject, fieldID JfieldID) mo.Result[Jobject] {
+	ret := Jobject(C.GetObjectField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
+	return mo.Ok(ret)
 }
 
-func (env Env) GetBooleanField(obj Jobject, fieldID JfieldID) bool {
-	return C.GetBooleanField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))) != C.JNI_FALSE
+func (env Env) GetBooleanField(obj Jobject, fieldID JfieldID) mo.Result[bool] {
+	ret := C.GetBooleanField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))) != C.JNI_FALSE
+	return mo.Ok(ret)
 }
 
 func (env Env) GetByteField(obj Jobject, fieldID JfieldID) byte {
@@ -1214,12 +1217,14 @@ func (env Env) GetShortField(obj Jobject, fieldID JfieldID) int16 {
 	return int16(C.GetShortField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
 }
 
-func (env Env) GetIntField(obj Jobject, fieldID JfieldID) int {
-	return int(C.GetIntField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
+func (env Env) GetIntField(obj Jobject, fieldID JfieldID) mo.Result[int] {
+	ret := int(C.GetIntField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
+	return mo.Ok(ret)
 }
 
-func (env Env) GetLongField(obj Jobject, fieldID JfieldID) int64 {
-	return int64(C.GetLongField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
+func (env Env) GetLongField(obj Jobject, fieldID JfieldID) mo.Result[int64] {
+	ret := int64(C.GetLongField((*C.JNIEnv)(unsafe.Pointer(env)), C.jobject(obj), C.jfieldID(unsafe.Pointer(fieldID))))
+	return mo.Ok(ret)
 }
 
 func (env Env) GetFloatField(obj Jobject, fieldID JfieldID) float32 {
@@ -1306,12 +1311,20 @@ func (env Env) CallStaticShortMethodA(clazz Jclass, methodID JmethodID, args ...
 	return int16(C.CallStaticShortMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args)))
 }
 
-func (env Env) CallStaticIntMethodA(clazz Jclass, methodID JmethodID, args ...Jvalue) int {
-	return int(C.CallStaticIntMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args)))
+func (env Env) CallStaticIntMethodA(clazz Jclass, methodID JmethodID, args ...Jvalue) mo.Result[int] {
+	r := int(C.CallStaticIntMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args)))
+	if env.ExceptionCheck() {
+		return mo.Errf[int](env.GetAndClearExceptionMessage())
+	}
+	return mo.Ok(r)
 }
 
-func (env Env) CallStaticLongMethodA(clazz Jclass, methodID JmethodID, args ...Jvalue) int64 {
-	return int64(C.CallStaticLongMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args)))
+func (env Env) CallStaticLongMethodA(clazz Jclass, methodID JmethodID, args ...Jvalue) mo.Result[int64] {
+	r := int64(C.CallStaticLongMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args)))
+	if env.ExceptionCheck() {
+		return mo.Errf[int64](env.GetAndClearExceptionMessage())
+	}
+	return mo.Ok(r)
 }
 
 func (env Env) CallStaticFloatMethodA(clazz Jclass, methodID JmethodID, args ...Jvalue) float32 {
@@ -1322,8 +1335,12 @@ func (env Env) CallStaticDoubleMethodA(clazz Jclass, methodID JmethodID, args ..
 	return float64(C.CallStaticDoubleMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(clazz), C.jmethodID(unsafe.Pointer(methodID)), cvals(args)))
 }
 
-func (env Env) CallStaticVoidMethodA(cls Jclass, methodID JmethodID, args ...Jvalue) {
+func (env Env) CallStaticVoidMethodA(cls Jclass, methodID JmethodID, args ...Jvalue) mo.Result[struct{}] {
 	C.CallStaticVoidMethodA((*C.JNIEnv)(unsafe.Pointer(env)), C.jclass(cls), C.jmethodID(unsafe.Pointer(methodID)), cvals(args))
+	if env.ExceptionCheck() {
+		return mo.Errf[struct{}](env.GetAndClearExceptionMessage())
+	}
+	return mo.Result[struct{}]{}
 }
 
 func (env Env) GetStaticFieldID(clazz Jclass, name string, sig string) JfieldID {

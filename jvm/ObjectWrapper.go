@@ -37,6 +37,14 @@ type ObjectWrapper struct {
 //		})
 //		return mo.Ok[*ObjectWrapper](objWrapper)
 //	}
+
+func (o *ObjectWrapper) GetStringFieldValue(funcName string) mo.Result[string] {
+	ret, err := ObjectWrapperGetFieldValue[string](o, funcName).Get()
+	if err != nil {
+		return mo.Err[string](err)
+	}
+	return mo.Ok(ret.(string))
+}
 func (o *ObjectWrapper) CallPStringA(funcName string, args ...any) mo.Result[*string] {
 	ret, err := ObjectWrapperCall[*string](o, funcName, args...).Get()
 	if err != nil {
@@ -133,7 +141,16 @@ func (o *ObjectWrapper) Class() mo.Result[*ClassWrapper] {
 	if err != nil {
 		return mo.Err[*ClassWrapper](err)
 	}
-	return Use(clsName)
+	cls, err := Use(clsName).Get()
+	if err != nil {
+		if clsName != "" {
+			env := LocalThreadJavaEnv()
+			return ForeUse(clsName, env.GetObjectClass(o.JniPtr()).MustGet())
+		} else {
+			return mo.Err[*ClassWrapper](err)
+		}
+	}
+	return mo.Ok(cls)
 }
 func (o *ObjectWrapper) Free() {
 	env := LocalThreadJavaEnv()
@@ -151,7 +168,7 @@ func Cast(ptr uintptr, class string) *ClassWrapper {
 }
 
 func ObjectWrapperWithJniPtr(ptr uintptr) *ObjectWrapper {
-	return &ObjectWrapper{ptr: ptr,isGlobal: false}
+	return &ObjectWrapper{ptr: ptr, isGlobal: false}
 }
 
 func ObjectWrapperWithGlobalJniPtr(ptr uintptr) *ObjectWrapper {
