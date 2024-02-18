@@ -1,4 +1,4 @@
-package go_ndk
+package ndk
 
 func Export() string {
 	return "ok"
