@@ -3,8 +3,8 @@ module github.com/aadog/go-ndk
 go 1.22rc1
 
 require (
-	github.com/aadog/go-ffi v0.0.0-20240217054044-f4998dee7225
-	github.com/aadog/go-gumjs v0.0.0-20240217081055-697e80c0ab3a
+	github.com/aadog/go-ffi v0.0.0-20240218110600-29363d58f360
+	github.com/aadog/go-gumjs v0.0.0-20240218130530-204fb2e32606
 	github.com/samber/lo v1.39.0
 	github.com/samber/mo v1.11.0
 )
